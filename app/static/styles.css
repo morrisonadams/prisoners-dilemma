@@ -1,0 +1,249 @@
+:root {
+  color-scheme: light dark;
+  font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+  line-height: 1.5;
+  font-size: 16px;
+  background-color: #f5f5f7;
+  color: #1f2933;
+}
+
+body {
+  margin: 0;
+  background: linear-gradient(180deg, #f5f5f7 0%, #e9ecf2 100%);
+}
+
+.hero {
+  background: #192a56;
+  color: #fff;
+  padding: 2.5rem 0;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.hero .subtitle {
+  opacity: 0.85;
+  max-width: 42rem;
+}
+
+.container {
+  margin: 0 auto;
+  padding: 0 1.5rem;
+  max-width: 1200px;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 1.5rem;
+  margin: -3rem auto 2rem auto;
+}
+
+.card {
+  background: #fff;
+  border-radius: 1rem;
+  box-shadow: 0 20px 60px rgba(25, 42, 86, 0.12);
+  padding: 1.75rem;
+}
+
+.card h2 {
+  margin-top: 0;
+  font-size: 1.5rem;
+}
+
+form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.grid {
+  display: grid;
+  gap: 1rem;
+}
+
+.grid input[type="number"] {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #d6dae5;
+  border-radius: 0.6rem;
+  font-size: 1rem;
+}
+
+.grid input[type="number"]:focus {
+  outline: 2px solid #5165ff;
+  border-color: transparent;
+}
+
+.grid {
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+}
+
+fieldset {
+  margin-top: 1.5rem;
+  border: 1px solid #dbe1f1;
+  border-radius: 1rem;
+  padding: 1rem;
+}
+
+legend {
+  padding: 0 0.5rem;
+  font-weight: 700;
+}
+
+.strategy-actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.strategy-actions button,
+.actions button {
+  background: #5165ff;
+  color: #fff;
+  border: none;
+  border-radius: 999px;
+  padding: 0.5rem 1.25rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.strategy-actions button:hover,
+.actions button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 25px rgba(81, 101, 255, 0.25);
+}
+
+.strategy-actions button:disabled,
+.actions button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.strategy-list {
+  display: grid;
+  gap: 0.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.strategy-list label {
+  border: 1px solid #dbe1f1;
+  border-radius: 0.8rem;
+  padding: 0.75rem;
+  background: #f8f9ff;
+  display: block;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.strategy-item {
+  display: block;
+}
+
+.strategy-name {
+  display: inline-block;
+  font-weight: 700;
+  margin-right: 0.25rem;
+}
+
+.strategy-description {
+  display: block;
+  font-size: 0.85rem;
+  color: #5a6785;
+  margin-top: 0.25rem;
+}
+
+.strategy-list input[type="checkbox"] {
+  margin-right: 0.5rem;
+}
+
+.strategy-list label:hover {
+  border-color: #5165ff;
+  box-shadow: 0 12px 30px rgba(81, 101, 255, 0.15);
+}
+
+.loading {
+  margin: 0;
+  font-style: italic;
+}
+
+.actions {
+  margin-top: 1.5rem;
+}
+
+.status {
+  margin: 0 0 1rem 0;
+  color: #3d4a62;
+  font-weight: 500;
+}
+
+.summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  background: #f5f7ff;
+  border-radius: 0.8rem;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.summary strong {
+  font-size: 0.95rem;
+}
+
+.tables {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.table-wrapper {
+  overflow-x: auto;
+}
+
+#standingsTable,
+#matchesTable {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 400px;
+}
+
+#standingsTable th,
+#standingsTable td,
+#matchesTable th,
+#matchesTable td {
+  padding: 0.6rem 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid #e3e8f5;
+}
+
+#standingsTable tbody tr:nth-child(even),
+#matchesTable tbody tr:nth-child(even) {
+  background: rgba(81, 101, 255, 0.06);
+}
+
+.hidden {
+  display: none;
+}
+
+.hint {
+  color: #6c7a97;
+  font-size: 0.9rem;
+  margin-top: 0.75rem;
+}
+
+.footer {
+  padding: 2rem 0;
+  text-align: center;
+  font-size: 0.85rem;
+  color: #6c7a97;
+}
+
+@media (max-width: 720px) {
+  .layout {
+    margin-top: -2rem;
+  }
+
+  .card {
+    padding: 1.25rem;
+  }
+}

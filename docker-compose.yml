@@ -1,0 +1,8 @@
+services:
+  pd:
+    build: .
+    image: pd-tournament:latest
+    command: []
+    volumes:
+      - ./out:/out
+    working_dir: /app

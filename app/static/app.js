@@ -11,6 +11,11 @@ const runButton = document.getElementById('runButton');
 const summaryStrategies = document.getElementById('summaryStrategies');
 const summaryRounds = document.getElementById('summaryRounds');
 const summaryRepeats = document.getElementById('summaryRepeats');
+const summaryTopStrategy = document.getElementById('summaryTopStrategy');
+const standingsChart = document.getElementById('standingsChart');
+const strategyCounter = document.getElementById('strategyCounter');
+const strategyTotal = document.getElementById('strategyTotal');
+const startFormCta = document.getElementById('startFormCta');
 
 const MAX_MATCH_ROWS = 100;
 
@@ -37,6 +42,12 @@ async function loadStrategies() {
     strategiesListEl.appendChild(error);
     selectAllBtn.disabled = true;
     clearAllBtn.disabled = true;
+    if (strategyCounter) {
+      strategyCounter.textContent = '0';
+    }
+    if (strategyTotal) {
+      strategyTotal.textContent = '0';
+    }
   }
 }
 
@@ -47,6 +58,7 @@ function renderStrategies(strategies) {
     empty.className = 'status';
     empty.textContent = 'No strategies available.';
     strategiesListEl.appendChild(empty);
+    updateStrategyCounter();
     return;
   }
 
@@ -60,6 +72,7 @@ function renderStrategies(strategies) {
     checkbox.name = 'strategies';
     checkbox.value = strategy.name;
     checkbox.checked = true;
+    checkbox.addEventListener('change', updateStrategyCounter);
 
     const nameSpan = document.createElement('span');
     nameSpan.className = 'strategy-name';
@@ -74,6 +87,11 @@ function renderStrategies(strategies) {
     label.appendChild(description);
     strategiesListEl.appendChild(label);
   }
+
+  if (strategyTotal) {
+    strategyTotal.textContent = String(sorted.length);
+  }
+  updateStrategyCounter();
 }
 
 function gatherFormData() {
@@ -156,6 +174,13 @@ function renderResults(result) {
     ? `${params.rounds ?? '—'} (continuation ${params.continuation})`
     : (params.rounds ?? '—');
   summaryRepeats.textContent = params.repeats ?? '—';
+  if (standings.length && summaryTopStrategy) {
+    const top = standings[0];
+    const avg = Number(top.avg_per_round ?? 0);
+    summaryTopStrategy.textContent = `${top.strategy} (${avg.toFixed(4)} avg / round)`;
+  } else if (summaryTopStrategy) {
+    summaryTopStrategy.textContent = '—';
+  }
 
   standingsBody.innerHTML = '';
   standings.forEach((row, index) => {
@@ -200,6 +225,8 @@ function renderResults(result) {
     matchHintEl.textContent = '';
   }
 
+  renderStandingsChart(standings);
+
   statusMessageEl.textContent = `Tournament complete: ${matches.length} matches played.`;
   resultsWrapper.classList.remove('hidden');
 }
@@ -209,10 +236,93 @@ function setAllStrategies(checked) {
   inputs.forEach((input) => {
     input.checked = checked;
   });
+  updateStrategyCounter();
+}
+
+function updateStrategyCounter() {
+  if (!strategyCounter) {
+    return;
+  }
+  const all = strategiesListEl.querySelectorAll('input[type="checkbox"]');
+  const checked = strategiesListEl.querySelectorAll('input[type="checkbox"]:checked');
+  strategyCounter.textContent = String(checked.length);
+  if (strategyTotal) {
+    strategyTotal.textContent = String(all.length);
+  }
+}
+
+function renderStandingsChart(standings) {
+  if (!standingsChart) {
+    return;
+  }
+
+  standingsChart.innerHTML = '';
+  if (!standings.length) {
+    const empty = document.createElement('p');
+    empty.className = 'status';
+    empty.textContent = 'Run a tournament to see program performance.';
+    standingsChart.appendChild(empty);
+    return;
+  }
+
+  const maxAvg = Math.max(...standings.map((row) => Number(row.avg_per_round ?? 0)));
+  standings.forEach((row, index) => {
+    const avg = Number(row.avg_per_round ?? 0);
+    const total = Number(row.total_score ?? 0);
+    const wrapper = document.createElement('div');
+    wrapper.className = 'chart-row';
+
+    const label = document.createElement('div');
+    label.className = 'chart-label';
+    label.textContent = `${index + 1}. ${row.strategy}`;
+
+    const bar = document.createElement('div');
+    bar.className = 'chart-bar';
+
+    const fill = document.createElement('div');
+    fill.className = 'chart-bar-fill';
+    const width = maxAvg > 0 ? Math.max((avg / maxAvg) * 100, 2) : 0;
+    fill.style.width = `${width}%`;
+    fill.setAttribute('aria-hidden', 'true');
+
+    const score = document.createElement('span');
+    score.className = 'chart-score';
+    score.textContent = `${avg.toFixed(3)} avg`;
+
+    const totalBadge = document.createElement('span');
+    totalBadge.className = 'chart-total';
+    totalBadge.textContent = `${total.toFixed(1)} pts`;
+
+    bar.appendChild(fill);
+    wrapper.appendChild(label);
+    wrapper.appendChild(bar);
+    wrapper.appendChild(score);
+    wrapper.appendChild(totalBadge);
+    standingsChart.appendChild(wrapper);
+  });
 }
 
 selectAllBtn.addEventListener('click', () => setAllStrategies(true));
 clearAllBtn.addEventListener('click', () => setAllStrategies(false));
 form.addEventListener('submit', submitForm);
 
+if (startFormCta) {
+  startFormCta.addEventListener('click', () => {
+    const card = document.getElementById('configCard');
+    if (!card) {
+      return;
+    }
+    card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const firstInput = card.querySelector('input, select, button');
+    if (firstInput instanceof HTMLElement) {
+      try {
+        firstInput.focus({ preventScroll: true });
+      } catch (err) {
+        firstInput.focus();
+      }
+    }
+  });
+}
+
+renderStandingsChart([]);
 loadStrategies();

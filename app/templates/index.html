@@ -11,6 +11,10 @@
     <div class="container">
       <h1>Iterated Prisoner's Dilemma Tournament</h1>
       <p class="subtitle">Experiment with classic strategies and visualize the results in real time.</p>
+      <div class="hero-actions">
+        <button type="button" class="cta" id="startFormCta">Start a tournament</button>
+        <p class="hero-hint">Pick the programs you want to pit against each other, configure the rules, and watch the standings update instantly.</p>
+      </div>
     </div>
   </header>
 
@@ -47,6 +51,11 @@
             <button type="button" id="selectAll">Select all</button>
             <button type="button" id="clearAll">Clear</button>
           </div>
+          <p class="strategy-meter">
+            <span><strong id="strategyCounter">0</strong> selected</span>
+            <span class="divider" aria-hidden="true">•</span>
+            <span><span id="strategyTotal">0</span> available programs</span>
+          </p>
           <div id="strategiesList" class="strategy-list" aria-live="polite">
             <p class="loading">Loading strategies…</p>
           </div>
@@ -93,7 +102,16 @@
             <strong>Repeats:</strong>
             <span id="summaryRepeats"></span>
           </div>
+          <div>
+            <strong>Top program:</strong>
+            <span id="summaryTopStrategy">—</span>
+          </div>
         </div>
+
+        <section class="chart" aria-label="Average score per round by program">
+          <h3>Performance overview</h3>
+          <div id="standingsChart" class="chart-body"></div>
+        </section>
 
         <div class="tables">
           <div class="table-wrapper">

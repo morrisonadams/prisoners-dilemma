@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Prisoner's Dilemma Tournament</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+  <header class="hero">
+    <div class="container">
+      <h1>Iterated Prisoner's Dilemma Tournament</h1>
+      <p class="subtitle">Experiment with classic strategies and visualize the results in real time.</p>
+    </div>
+  </header>
+
+  <main class="container layout">
+    <section class="card" id="configCard">
+      <h2>Configure tournament</h2>
+      <form id="tournamentForm">
+        <div class="grid">
+          <label>
+            Rounds
+            <input type="number" name="rounds" min="1" value="150" required>
+          </label>
+          <label>
+            Continuation probability
+            <input type="number" name="continuation" min="0" max="1" step="0.01" value="0">
+          </label>
+          <label>
+            Noise probability
+            <input type="number" name="noise" min="0" max="1" step="0.01" value="0">
+          </label>
+          <label>
+            Repeats
+            <input type="number" name="repeats" min="1" value="1" required>
+          </label>
+          <label>
+            Seed (optional)
+            <input type="number" name="seed" placeholder="random">
+          </label>
+        </div>
+
+        <fieldset class="strategies">
+          <legend>Strategies</legend>
+          <div class="strategy-actions">
+            <button type="button" id="selectAll">Select all</button>
+            <button type="button" id="clearAll">Clear</button>
+          </div>
+          <div id="strategiesList" class="strategy-list" aria-live="polite">
+            <p class="loading">Loading strategies…</p>
+          </div>
+        </fieldset>
+
+        <fieldset class="payoffs">
+          <legend>Payoff matrix</legend>
+          <div class="grid payoff-grid">
+            <label>Temptation (T)
+              <input type="number" name="payoff_T" value="5">
+            </label>
+            <label>Reward (R)
+              <input type="number" name="payoff_R" value="3">
+            </label>
+            <label>Punishment (P)
+              <input type="number" name="payoff_P" value="1">
+            </label>
+            <label>Sucker (S)
+              <input type="number" name="payoff_S" value="0">
+            </label>
+          </div>
+        </fieldset>
+
+        <div class="actions">
+          <button type="submit" id="runButton">Run tournament</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="card" id="resultsCard">
+      <h2>Results</h2>
+      <p id="statusMessage" class="status">Pick some strategies and press “Run tournament”.</p>
+      <div id="results" class="hidden" aria-live="polite">
+        <div class="summary">
+          <div>
+            <strong>Strategies:</strong>
+            <span id="summaryStrategies"></span>
+          </div>
+          <div>
+            <strong>Rounds per match:</strong>
+            <span id="summaryRounds"></span>
+          </div>
+          <div>
+            <strong>Repeats:</strong>
+            <span id="summaryRepeats"></span>
+          </div>
+        </div>
+
+        <div class="tables">
+          <div class="table-wrapper">
+            <h3>Standings</h3>
+            <table id="standingsTable">
+              <thead>
+                <tr>
+                  <th scope="col">Rank</th>
+                  <th scope="col">Strategy</th>
+                  <th scope="col">Total score</th>
+                  <th scope="col">Total rounds</th>
+                  <th scope="col">Avg / round</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+          <div class="table-wrapper">
+            <h3>Match breakdown</h3>
+            <table id="matchesTable">
+              <thead>
+                <tr>
+                  <th scope="col">Rep</th>
+                  <th scope="col">A</th>
+                  <th scope="col">B</th>
+                  <th scope="col">Score A</th>
+                  <th scope="col">Score B</th>
+                  <th scope="col">Avg A</th>
+                  <th scope="col">Avg B</th>
+                  <th scope="col">Rounds</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+            <p class="hint" id="matchHint"></p>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="container">
+      <p>Built with Flask &amp; vanilla JavaScript. Source available in this repository.</p>
+    </div>
+  </footer>
+
+  <script src="{{ url_for('static', filename='app.js') }}" defer></script>
+</body>
+</html>

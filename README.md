@@ -20,6 +20,24 @@ docker compose run --rm pd --rounds 200 --repeats 3 --noise 0.03 --continuation 
 ls out
 ```
 
+## Web interface
+
+A lightweight Flask UI is included for exploring tournaments interactively.
+
+```bash
+# Install the package locally (creates a virtualenv if desired)
+python -m venv .venv
+source .venv/bin/activate
+pip install -e .
+
+# Start the web server
+flask --app app.web run
+
+# Visit http://127.0.0.1:5000/ in your browser
+```
+
+The web UI lets you pick strategies, tweak tournament parameters, and view standings/match breakdowns without leaving the browser.
+
 ## Options
 
 - `--rounds`: Fixed number of rounds per match if `--continuation` is 0. Default 150

@@ -9,6 +9,7 @@ from typing import Any, Dict, List, Sequence, Type
 from .engine import Payoffs, play_match
 from . import strategies as S
 from .strategies import BaseStrategy
+from .media import MatchOutcome, MediaNetwork
 
 StrategyClass = Type[BaseStrategy]
 
@@ -57,6 +58,7 @@ def run_tournament(
     exclude: Sequence[str] | None = None,
     strategy_classes: Sequence[StrategyClass] | None = None,
     rng: random.Random | None = None,
+    media: MediaNetwork | Dict[str, Any] | None = None,
 ) -> Dict[str, Any]:
     """Run a full round-robin tournament and return serialized results."""
     if payoffs is None:
@@ -80,9 +82,22 @@ def run_tournament(
     totals: Dict[str, float] = {}
     rounds_played: Dict[str, int] = {}
 
+    media_network: MediaNetwork | None = None
+    if media is not None:
+        if isinstance(media, MediaNetwork):
+            media_network = media
+            media_network.set_rng(rng)
+        else:
+            media_network = MediaNetwork.from_config(media, rng=rng)
+
     for rep in range(max(1, repeats)):
         players = [cls() for cls in strategy_classes]
         names = [p.__class__.__name__ for p in players]
+
+        if media_network:
+            media_network.bind_players(players, reset_pending=True)
+
+        match_ordinal = 0
 
         for i, player_a in enumerate(players):
             for j, player_b in enumerate(players):
@@ -97,6 +112,20 @@ def run_tournament(
                     payoffs=payoffs,
                     rng=rng,
                 )
+                match_id = (rep, names[i], names[j], match_ordinal)
+                outcome = MatchOutcome(
+                    match_id=match_id,
+                    rep=rep,
+                    ordinal=match_ordinal,
+                    player_a=names[i],
+                    player_b=names[j],
+                    rounds=result["rounds"],
+                    scores=dict(result["scores"]),
+                    averages=dict(result["avg"]),
+                    history=dict(result["history"]),
+                )
+                match_ordinal += 1
+
                 row = {
                     "rep": rep,
                     "A": names[i],
@@ -108,13 +137,20 @@ def run_tournament(
                     "avg_B": round(result["avg"]["B"], 4),
                     "history_A": result["history"]["A"],
                     "history_B": result["history"]["B"],
+                    "match_id": match_id,
                 }
                 matches.append(row)
+
+                if media_network:
+                    media_network.publish(outcome)
 
                 totals[names[i]] = totals.get(names[i], 0.0) + row["score_A"]
                 totals[names[j]] = totals.get(names[j], 0.0) + row["score_B"]
                 rounds_played[names[i]] = rounds_played.get(names[i], 0) + row["rounds"]
                 rounds_played[names[j]] = rounds_played.get(names[j], 0) + row["rounds"]
+
+        if media_network:
+            media_network.drain()
 
     standings = [
         {

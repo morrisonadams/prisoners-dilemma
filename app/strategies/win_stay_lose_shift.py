@@ -1,6 +1,7 @@
 from .base import BaseStrategy
 class WinStayLoseShift(BaseStrategy):
     def reset(self):
+        super().reset()
         self.last_move = "C"
     def decide(self, my_history, opp_history, round_index):
         if not my_history:

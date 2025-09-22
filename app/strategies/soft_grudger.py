@@ -1,6 +1,7 @@
 from .base import BaseStrategy
 class SoftGrudger(BaseStrategy):
     def reset(self):
+        super().reset()
         self.punish = 0
     def decide(self, my_history, opp_history, round_index):
         if opp_history and opp_history[-1] == "D":

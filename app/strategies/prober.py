@@ -4,6 +4,7 @@ class Prober(BaseStrategy):
     D, C, C start. If opponent retaliates during probe, switch to TFT. Else exploit with D.
     """
     def reset(self):
+        super().reset()
         self.mode = "probe"  # "probe" -> "tft" or "exploit"
     def decide(self, my_history, opp_history, round_index):
         if len(my_history) < 1:

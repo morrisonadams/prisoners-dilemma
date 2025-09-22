@@ -9,13 +9,16 @@ Includes classic strategies like TitForTat, GrimTrigger, WinStayLoseShift, and m
 # 1) Build the image
 docker compose build
 
-# 2) Run a default tournament
-docker compose run --rm pd
+# 2) Start the web UI (http://127.0.0.1:5000)
+docker compose up
 
-# 3) Run with options
-docker compose run --rm pd --rounds 200 --repeats 3 --noise 0.03 --continuation 0.0 --seed 123
+# 3) Run a one-off tournament via the CLI
+docker compose --profile cli run --rm pd
 
-# 4) Results
+# 4) Run with options
+docker compose --profile cli run --rm pd --rounds 200 --repeats 3 --noise 0.03 --continuation 0.0 --seed 123
+
+# 5) Results
 # CSVs and JSON summaries will be written to ./out on your machine
 ls out
 ```
@@ -35,6 +38,9 @@ flask --app app.web run
 
 # Visit http://127.0.0.1:5000/ in your browser
 ```
+
+Alternatively, you can launch the same UI with Docker using `docker compose up`
+and browse to [http://127.0.0.1:5000](http://127.0.0.1:5000).
 
 The web UI lets you pick strategies, tweak tournament parameters, and view standings/match breakdowns without leaving the browser.
 

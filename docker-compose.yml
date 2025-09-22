@@ -2,7 +2,17 @@ services:
   pd:
     build: .
     image: pd-tournament:latest
-    command: []
+    working_dir: /app
+    entrypoint: ["python", "-m", "app.cli"]
     volumes:
       - ./out:/out
+    profiles: ["cli"]
+
+  web:
+    build: .
+    image: pd-tournament:latest
     working_dir: /app
+    entrypoint: ["python", "-m", "flask"]
+    command: ["--app", "app.web", "run", "--host=0.0.0.0", "--port=5000"]
+    ports:
+      - "5000:5000"

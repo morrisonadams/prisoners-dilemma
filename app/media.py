@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import copy
+import json
 import random
 from dataclasses import dataclass, field
 from typing import Any, Dict, Iterable, List, Sequence, Tuple
@@ -9,6 +11,81 @@ from typing import Any, Dict, Iterable, List, Sequence, Tuple
 from .strategies.base import BaseStrategy
 
 MatchID = Tuple[int, str, str, int]
+
+
+# Preset configurations that can be reused across the CLI and web UI.
+MEDIA_PRESETS: Dict[str, Dict[str, Any]] = {
+    "none": {
+        "outlets": [],
+        "subscriptions": {"limit": 0, "defaults": {}}
+    },
+    "basic": {
+        "outlets": [
+            {
+                "name": "GlobalTruth",
+                "coverage": 0.85,
+                "accuracy": 0.98,
+                "delay": [0, 1],
+            },
+            {
+                "name": "AxelrodTimes",
+                "coverage": 0.65,
+                "accuracy": 0.9,
+                "delay": [0, 1, 2],
+            },
+            {
+                "name": "RumorMill",
+                "coverage": 0.5,
+                "accuracy": 0.55,
+                "delay": [0, 1, 2, 3],
+            },
+        ],
+        "subscriptions": {
+            "limit": 2,
+            "defaults": {
+                "TitForTat": ["GlobalTruth"],
+                "GrimTrigger": ["AxelrodTimes"],
+                "Random": ["RumorMill"],
+            },
+        },
+    },
+}
+
+DEFAULT_MEDIA_PRESET = "basic"
+
+
+def clone_media_config(config: Dict[str, Any]) -> Dict[str, Any]:
+    """Return a deep copy of the provided media configuration."""
+
+    return copy.deepcopy(config)
+
+
+def resolve_media_config(spec: Any) -> Dict[str, Any] | None:
+    """Normalize a media configuration or preset reference.
+
+    Accepts dictionaries, preset names, or JSON strings. Returns a copy of the
+    resolved configuration or ``None`` if the specification is falsy.
+    """
+
+    if spec in (None, "", False):
+        return None
+    if isinstance(spec, dict):
+        return clone_media_config(spec)
+    if isinstance(spec, str):
+        value = spec.strip()
+        if not value:
+            return None
+        preset = MEDIA_PRESETS.get(value) or MEDIA_PRESETS.get(value.lower())
+        if preset is not None:
+            return clone_media_config(preset)
+        try:
+            parsed = json.loads(value)
+        except json.JSONDecodeError as exc:
+            raise ValueError(f"Invalid media configuration: {exc}") from exc
+        if not isinstance(parsed, dict):
+            raise ValueError("Media configuration JSON must decode to an object")
+        return clone_media_config(parsed)
+    raise TypeError("Media configuration must be a dict, preset name, or JSON string")
 
 
 @dataclass(frozen=True)
@@ -190,20 +267,56 @@ class MediaOutlet:
             avoid_duplicates=avoid_duplicates,
         )
 
+    def to_config(self) -> Dict[str, Any]:
+        delay = self.delay
+        if isinstance(delay, tuple):
+            delay_value: Sequence[int] = list(delay)
+        else:
+            delay_value = delay  # type: ignore[assignment]
+        return {
+            "name": self.name,
+            "coverage": self.coverage,
+            "accuracy": self.accuracy,
+            "delay": delay_value,
+            "avoid_duplicates": self.avoid_duplicates,
+        }
+
 
 @dataclass
 class MediaNetwork:
     """Coordinates a collection of media outlets and delivers reports to strategies."""
 
     outlets: Sequence[MediaOutlet] = field(default_factory=list)
+    subscription_limit: int | None = None
+    default_enrollments: Dict[str, Sequence[str]] = field(default_factory=dict)
+    enrollments: Dict[str, Sequence[str]] = field(default_factory=dict)
     rng: random.Random | None = None
     _pending: List[Tuple[int, MediaReport]] = field(default_factory=list, init=False, repr=False)
     _listeners: List[BaseStrategy] = field(default_factory=list, init=False, repr=False)
+    _resolved_enrollments: Dict[str, List[str]] = field(default_factory=dict, init=False, repr=False)
+    _report_log: List[Dict[str, Any]] = field(default_factory=list, init=False, repr=False)
 
     def __post_init__(self) -> None:
         self.outlets = [MediaOutlet.from_config(o) if not isinstance(o, MediaOutlet) else o for o in self.outlets]
         if self.rng is None:
             self.rng = random.Random()
+        if self.subscription_limit is not None:
+            try:
+                self.subscription_limit = max(0, int(self.subscription_limit))
+            except (TypeError, ValueError):
+                self.subscription_limit = None
+        self.default_enrollments = {
+            key: list(value)
+            for key, value in (self.default_enrollments or {}).items()
+        }
+        self.enrollments = {
+            key: list(value)
+            for key, value in (self.enrollments or {}).items()
+        }
+        self._resolve_subscriptions()
+
+    def reset_logs(self) -> None:
+        self._report_log.clear()
 
     def bind_players(self, players: Sequence[BaseStrategy], *, reset_pending: bool = True) -> None:
         """Attach player instances that should receive future broadcasts."""
@@ -213,6 +326,9 @@ class MediaNetwork:
             self._pending.clear()
         for player in self._listeners:
             player.media_reset()
+        active = {player.name() for player in self._listeners}
+        self._apply_active_players(active)
+        self._resolve_subscriptions()
 
     def set_rng(self, rng: random.Random | None) -> None:
         self.rng = rng if rng is not None else random.Random()
@@ -262,8 +378,16 @@ class MediaNetwork:
     def _broadcast(self, report: MediaReport) -> None:
         if not self._listeners:
             return
+        outlet_name = report.outlet
+        has_enrollment_rules = bool(self._resolved_enrollments)
         for player in self._listeners:
+            name = player.name()
+            if has_enrollment_rules:
+                allowed = self._resolved_enrollments.get(name)
+                if not allowed or outlet_name not in allowed:
+                    continue
             player.receive_media(report)
+            self._log_delivery(report, name)
 
     @classmethod
     def from_config(cls, config: Dict[str, Any], *, rng: random.Random | None = None) -> "MediaNetwork":
@@ -276,5 +400,118 @@ class MediaNetwork:
             raise TypeError("Media config must be a dict or MediaNetwork instance")
         outlets_cfg: Iterable[Any] = config.get("outlets", [])
         outlets = [MediaOutlet.from_config(item) for item in outlets_cfg]
-        network = cls(outlets=outlets, rng=rng)
+        subscriptions = config.get("subscriptions") or {}
+        limit = subscriptions.get("limit")
+        defaults = subscriptions.get("defaults") or {}
+        enrollments = subscriptions.get("enrollments") or {}
+        network = cls(
+            outlets=outlets,
+            subscription_limit=limit,
+            default_enrollments=defaults,
+            enrollments=enrollments,
+            rng=rng,
+        )
         return network
+
+    # Internal helpers -------------------------------------------------
+
+    def _normalize_choices(self, choices: Sequence[str] | None) -> List[str]:
+        available = {outlet.name for outlet in self.outlets}
+        limit = self.subscription_limit
+        result: List[str] = []
+        if not choices:
+            return result
+        for choice in choices:
+            name = str(choice)
+            if name not in available or name in result:
+                continue
+            result.append(name)
+            if limit is not None and len(result) >= limit:
+                break
+        return result
+
+    def _resolve_subscriptions(self) -> None:
+        resolved: Dict[str, List[str]] = {}
+        for strategy, outlets in (self.default_enrollments or {}).items():
+            resolved[strategy] = self._normalize_choices(outlets)
+        for strategy, outlets in (self.enrollments or {}).items():
+            resolved[strategy] = self._normalize_choices(outlets)
+        self._resolved_enrollments = resolved
+        self._prune_enrollments()
+
+    def _apply_active_players(self, active: set[str]) -> None:
+        if not active:
+            return
+        has_rules = bool(self.default_enrollments or self.enrollments or self.subscription_limit is not None)
+        if not has_rules:
+            self._resolved_enrollments = {}
+            return
+        resolved: Dict[str, List[str]] = {}
+        for name in active:
+            if name in self._resolved_enrollments:
+                resolved[name] = self._resolved_enrollments[name]
+            else:
+                defaults = self.default_enrollments.get(name)
+                resolved[name] = self._normalize_choices(defaults)
+        self._resolved_enrollments = resolved
+
+
+    def _prune_enrollments(self) -> None:
+        if not self._resolved_enrollments:
+            return
+        available = {outlet.name for outlet in self.outlets}
+        for strategy, outlets in list(self._resolved_enrollments.items()):
+            clean = [name for name in outlets if name in available]
+            if clean:
+                self._resolved_enrollments[strategy] = clean
+            else:
+                self._resolved_enrollments.pop(strategy, None)
+
+    def _log_delivery(self, report: MediaReport, recipient: str) -> None:
+        payload = dict(report.for_broadcast())
+        match_id_value = payload.get("match_id", report.match_id)
+        if isinstance(match_id_value, tuple):
+            match_id_value = list(match_id_value)
+            payload["match_id"] = match_id_value
+        entry = {
+            "recipient": recipient,
+            "outlet": report.outlet,
+            "accurate": report.accurate,
+            "delay": report.delay,
+            "rep": report.outcome.rep,
+            "ordinal": report.outcome.ordinal,
+            "match_id": match_id_value,
+            "payload": payload,
+        }
+        self._report_log.append(entry)
+
+    def export_state(self, *, include_reports: bool = True, reset_reports: bool = False) -> Dict[str, Any]:
+        """Return a serializable snapshot of the network configuration and logs."""
+
+        subscriptions: Dict[str, Any] = {
+            "limit": self.subscription_limit,
+            "defaults": {
+                name: list(outlets)
+                for name, outlets in (self.default_enrollments or {}).items()
+            },
+            "enrollments": {
+                name: list(outlets)
+                for name, outlets in self._resolved_enrollments.items()
+            },
+        }
+        data: Dict[str, Any] = {
+            "config": {
+                "outlets": [outlet.to_config() for outlet in self.outlets],
+                "subscriptions": subscriptions,
+            }
+        }
+        if include_reports:
+            grouped: Dict[str, List[Dict[str, Any]]] = {}
+            for entry in self._report_log:
+                recipient = entry.get("recipient")
+                payload = {k: v for k, v in entry.items() if k != "recipient"}
+                grouped.setdefault(recipient, []).append(payload)
+            data["reports"] = grouped
+        if reset_reports:
+            self._report_log.clear()
+        return data

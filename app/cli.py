@@ -3,18 +3,23 @@ import csv
 import datetime
 import json
 import os
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Sequence
 
 from .engine import Payoffs
 from .tournament import list_available_strategies, run_tournament
+from .media import MEDIA_PRESETS, resolve_media_config
 
-def write_csv(path: str, rows: List[Dict[str, Any]]):
-    fieldnames = sorted({k for row in rows for k in row.keys()})
+def write_csv(path: str, rows: List[Dict[str, Any]], fieldnames: Sequence[str] | None = None):
+    keys = {k for row in rows for k in row.keys()}
+    if fieldnames is None:
+        field_list = sorted(keys)
+    else:
+        field_list = list(fieldnames)
     with open(path, "w", newline="", encoding="utf-8") as f:
-        w = csv.DictWriter(f, fieldnames=fieldnames)
+        w = csv.DictWriter(f, fieldnames=field_list)
         w.writeheader()
         for row in rows:
-            w.writerow(row)
+            w.writerow({name: row.get(name, "") for name in field_list})
 
 def main():
     parser = argparse.ArgumentParser(description="Iterated Prisoner's Dilemma Tournament")
@@ -27,6 +32,13 @@ def main():
     parser.add_argument("--only", type=str, default="", help="Comma separated strategy names to include")
     parser.add_argument("--exclude", type=str, default="", help="Comma separated strategy names to exclude")
     parser.add_argument("--format", type=str, default="csv", choices=["csv","json"], help="Output format")
+    parser.add_argument(
+        "--media-config",
+        type=str,
+        default="",
+        help="JSON string or preset name for media network configuration"
+        f" (presets: {', '.join(sorted(MEDIA_PRESETS))})",
+    )
     parser.add_argument("--labels", action="store_true", help="List strategy names and exit")
     args = parser.parse_args()
 
@@ -41,6 +53,13 @@ def main():
     pay = json.loads(args.payoffs)
     payoffs = Payoffs(T=int(pay["T"]), R=int(pay["R"]), P=int(pay["P"]), S=int(pay["S"]))
 
+    media_config = None
+    if args.media_config:
+        try:
+            media_config = resolve_media_config(args.media_config)
+        except (ValueError, TypeError) as exc:
+            raise SystemExit(str(exc))
+
     try:
         result = run_tournament(
             rounds=args.rounds,
@@ -51,6 +70,7 @@ def main():
             payoffs=payoffs,
             only=only_list,
             exclude=exclude_list,
+            media=media_config,
         )
     except ValueError as exc:
         raise SystemExit(str(exc))
@@ -62,15 +82,52 @@ def main():
     matches = result["matches"]
     standings = result["standings"]
     strategies = result["strategies"]
+    media_data = result.get("media") or {}
+    media_reports = media_data.get("reports") if isinstance(media_data, dict) else None
+    media_rows: List[Dict[str, Any]] = []
+    if isinstance(media_reports, dict):
+        for strategy_name, entries in media_reports.items():
+            if not isinstance(entries, list):
+                continue
+            for entry in entries:
+                if not isinstance(entry, dict):
+                    continue
+                payload = entry.get("payload") or {}
+                payload_json = json.dumps(payload, sort_keys=True)
+                match_id = entry.get("match_id")
+                match_id_json = json.dumps(match_id) if match_id is not None else ""
+                media_rows.append(
+                    {
+                        "strategy": strategy_name,
+                        "outlet": entry.get("outlet", ""),
+                        "rep": entry.get("rep", ""),
+                        "ordinal": entry.get("ordinal", ""),
+                        "match_id": match_id_json,
+                        "accurate": entry.get("accurate", ""),
+                        "delay": entry.get("delay", ""),
+                        "payload": payload_json,
+                    }
+                )
 
     if args.format == "csv":
         write_csv(os.path.join(out_dir, f"{tag}_matches.csv"), matches)
         write_csv(os.path.join(out_dir, f"{tag}_standings.csv"), standings)
+        if media_data:
+            media_csv_path = os.path.join(out_dir, f"{tag}_media_reports.csv")
+            media_fields = ["strategy", "outlet", "rep", "ordinal", "match_id", "accurate", "delay", "payload"]
+            write_csv(media_csv_path, media_rows, fieldnames=media_fields)
+            media_json_path = os.path.join(out_dir, f"{tag}_media_reports.json")
+            with open(media_json_path, "w", encoding="utf-8") as f:
+                json.dump(media_data, f, indent=2)
         with open(os.path.join(out_dir, f"{tag}_summary.json"), "w", encoding="utf-8") as f:
             json.dump({
                 "params": vars(args),
                 "strategies": strategies,
-                "standings": standings[:5]
+                "standings": standings[:5],
+                "media": {
+                    "config": media_data.get("config") if isinstance(media_data, dict) else None,
+                    "reports": {name: len(entries) for name, entries in (media_reports or {}).items()},
+                },
             }, f, indent=2)
         print(f"Done. See CSVs and JSON in {out_dir}")
     else:
@@ -79,7 +136,8 @@ def main():
                 "params": vars(args),
                 "strategies": strategies,
                 "matches": matches,
-                "standings": standings
+                "standings": standings,
+                "media": media_data,
             }, f, indent=2)
         print(f"Done. See JSON in {out_dir}")
 

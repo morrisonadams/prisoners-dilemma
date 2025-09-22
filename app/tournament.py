@@ -89,6 +89,7 @@ def run_tournament(
             media_network.set_rng(rng)
         else:
             media_network = MediaNetwork.from_config(media, rng=rng)
+        media_network.reset_logs()
 
     for rep in range(max(1, repeats)):
         players = [cls() for cls in strategy_classes]
@@ -176,4 +177,6 @@ def run_tournament(
         "matches": matches,
         "standings": standings,
     }
+    if media_network:
+        result["media"] = media_network.export_state()
     return result

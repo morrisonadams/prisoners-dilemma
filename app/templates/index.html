@@ -79,6 +79,38 @@
           </div>
         </fieldset>
 
+        <fieldset class="media-config" aria-describedby="mediaLimitNote">
+          <legend>Media network</legend>
+          <p class="hint">Choose which outlets broadcast match outcomes and which strategies subscribe to them.</p>
+          <div class="media-grid">
+            <section class="media-outlets">
+              <h3>Outlets</h3>
+              <div id="mediaOutlets" class="media-outlet-list" aria-live="polite">
+                <p class="loading">Loading media configuration…</p>
+              </div>
+            </section>
+            <section class="media-subscriptions">
+              <h3>Subscriptions</h3>
+              <p id="mediaLimitNote" class="hint media-note">Loading…</p>
+              <div class="table-wrapper">
+                <table id="mediaSubscriptionsTable">
+                  <thead>
+                    <tr>
+                      <th scope="col">Strategy</th>
+                      <th scope="col">Subscribed outlets</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td colspan="2" class="hint">Select strategies to configure subscriptions.</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          </div>
+        </fieldset>
+
         <div class="actions">
           <button type="submit" id="runButton">Run tournament</button>
         </div>
@@ -105,6 +137,10 @@
           <div>
             <strong>Top program:</strong>
             <span id="summaryTopStrategy">—</span>
+          </div>
+          <div>
+            <strong>Media reports delivered:</strong>
+            <span id="summaryMediaReports">0</span>
           </div>
         </div>
 
@@ -147,6 +183,24 @@
               <tbody></tbody>
             </table>
             <p class="hint" id="matchHint"></p>
+          </div>
+          <div class="table-wrapper">
+            <h3>Media reports</h3>
+            <table id="mediaTable">
+              <thead>
+                <tr>
+                  <th scope="col">Strategy</th>
+                  <th scope="col">Outlet</th>
+                  <th scope="col">Rep</th>
+                  <th scope="col">Match</th>
+                  <th scope="col">Accurate</th>
+                  <th scope="col">Rumor</th>
+                  <th scope="col">Delay</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+            <p class="hint" id="mediaHint"></p>
           </div>
         </div>
       </div>

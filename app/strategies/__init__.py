@@ -9,6 +9,7 @@ from .prober import Prober
 from .soft_grudger import SoftGrudger
 from .responsive import Responsive
 from .grudger import Grudger
+from .media_informed import MediaSentinel, MediaTrendFollower, MediaWatchdog
 
 ALL_STRATEGIES = [
     AlwaysCooperate,
@@ -21,4 +22,7 @@ ALL_STRATEGIES = [
     SoftGrudger,
     Responsive,
     Grudger,
+    MediaSentinel,
+    MediaTrendFollower,
+    MediaWatchdog,
 ]

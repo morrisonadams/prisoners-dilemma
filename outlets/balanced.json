@@ -21,10 +21,6 @@
   ],
   "subscriptions": {
     "limit": 2,
-    "defaults": {
-      "TitForTat": ["GlobalTruth"],
-      "WinStayLoseShift": ["GlobalTruth", "RegionalObserver"],
-      "Random": ["QuickTake"]
-    }
+    "defaults": {}
   }
 }

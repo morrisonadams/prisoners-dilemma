@@ -21,11 +21,6 @@
   ],
   "subscriptions": {
     "limit": 1,
-    "defaults": {
-      "TitForTat": ["FactFocus"],
-      "GrimTrigger": ["FactFocus"],
-      "Random": ["ViralNow"],
-      "Defector": ["ViralNow"]
-    }
+    "defaults": {}
   }
 }

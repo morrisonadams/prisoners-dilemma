@@ -85,11 +85,7 @@ speculative sources:
   ],
   "subscriptions": {
     "limit": 2,
-    "defaults": {
-      "TitForTat": ["GlobalTruth"],
-      "WinStayLoseShift": ["GlobalTruth", "RegionalObserver"],
-      "Random": ["QuickTake"]
-    }
+    "defaults": {}
   }
 }
 ```
@@ -111,7 +107,9 @@ to the directory of ready-made samples.
 Strategies inherit from `BaseStrategy`, which provides a `receive_media`
 callback invoked whenever an enrolled outlet publishes a story. The default
 implementation records reports in the `.rumors` list so strategies can inspect
-them from `decide`:
+them from `decide`. Strategies that want to auto-enrol with outlets can also
+override `preferred_media_outlets`, which receives the available `MediaOutlet`
+instances and returns outlet names ordered by preference:
 
 ```python
 from .base import BaseStrategy
@@ -154,6 +152,10 @@ actively digest media coverage:
   coverage and borrows their latest move as its preferred opening.
 * **MediaWatchdog** – Monitors outlet accuracy and toggles between a strict grim
   trigger and a generous mode depending on how trustworthy the network appears.
+
+These strategies advertise their preferred outlets through
+`preferred_media_outlets`, allowing tournaments to auto-enrol them without user
+intervention while traditional strategies remain media agnostic.
 
 ## Add your own strategy
 

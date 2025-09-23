@@ -2,12 +2,13 @@
 from __future__ import annotations
 
 from collections import defaultdict, deque
-from typing import Deque, Tuple, TYPE_CHECKING
+from statistics import mean
+from typing import Deque, List, Sequence, Tuple, TYPE_CHECKING
 
 from .base import BaseStrategy
 
 if TYPE_CHECKING:
-    from ..media import MediaReport
+    from ..media import MediaOutlet, MediaReport
 
 
 class MediaSentinel(BaseStrategy):
@@ -50,6 +51,14 @@ class MediaSentinel(BaseStrategy):
                 old_coop, old_defect = self._recent_counts.popleft()
                 self._coop_total -= old_coop
                 self._defect_total -= old_defect
+
+    def preferred_media_outlets(self, outlets: Sequence["MediaOutlet"]) -> Sequence[str]:
+        scored = sorted(
+            outlets,
+            key=lambda outlet: (outlet.accuracy * outlet.coverage, outlet.coverage),
+            reverse=True,
+        )
+        return [outlet.name for outlet in scored]
 
     def _hostile_environment(self) -> bool:
         total = self._coop_total + self._defect_total
@@ -116,6 +125,25 @@ class MediaTrendFollower(BaseStrategy):
         # We defected while the opponent cooperated; lean on the trend rather than persist.
         return self._best_action
 
+    def preferred_media_outlets(self, outlets: Sequence["MediaOutlet"]) -> Sequence[str]:
+        def avg_delay(outlet: "MediaOutlet") -> float:
+            delay = outlet.delay
+            if isinstance(delay, Sequence) and not isinstance(delay, (str, bytes, bytearray)):
+                values = [int(value) for value in delay]
+                if not values:
+                    return 0.0
+                return float(mean(values))
+            try:
+                return float(delay)
+            except (TypeError, ValueError):
+                return 0.0
+
+        ranked = sorted(
+            outlets,
+            key=lambda outlet: (-outlet.accuracy, avg_delay(outlet), -outlet.coverage),
+        )
+        return [outlet.name for outlet in ranked]
+
 
 class MediaWatchdog(BaseStrategy):
     """Adjusts between grim and generous modes based on outlet reliability."""
@@ -176,3 +204,16 @@ class MediaWatchdog(BaseStrategy):
             # If we defected last round without provocation, ease back to cooperation.
             return "C"
         return "C"
+
+    def preferred_media_outlets(self, outlets: Sequence["MediaOutlet"]) -> Sequence[str]:
+        if not outlets:
+            return []
+
+        trusted = sorted(outlets, key=lambda outlet: outlet.accuracy, reverse=True)
+        sensational = sorted(outlets, key=lambda outlet: outlet.coverage - outlet.accuracy, reverse=True)
+
+        chosen: List[str] = []
+        for outlet in trusted[:2] + sensational[:2]:
+            if outlet.name not in chosen:
+                chosen.append(outlet.name)
+        return chosen

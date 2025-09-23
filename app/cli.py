@@ -36,8 +36,11 @@ def main():
         "--media-config",
         type=str,
         default="",
-        help="JSON string or preset name for media network configuration"
-        f" (presets: {', '.join(sorted(MEDIA_PRESETS))})",
+        help=(
+            "JSON string or preset name for media network configuration "
+            f"(presets: {', '.join(sorted(MEDIA_PRESETS))}; "
+            "see outlets/*.json for coverage vs. accuracy examples)"
+        ),
     )
     parser.add_argument("--labels", action="store_true", help="List strategy names and exit")
     args = parser.parse_args()

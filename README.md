@@ -143,6 +143,18 @@ state between tournaments. Always guard against rumours by checking
 `report.accurate` or other payload fields that outlets may swap when accuracy
 rolls fail.
 
+### Media-aware strategy lineup
+
+Alongside the classics, the tournament now ships with several strategies that
+actively digest media coverage:
+
+* **MediaSentinel** – Extends Tit-for-Tat by scanning accurate reports for high
+  defection rates and opening defensively when the environment looks hostile.
+* **MediaTrendFollower** – Tracks the highest-scoring players mentioned in
+  coverage and borrows their latest move as its preferred opening.
+* **MediaWatchdog** – Monitors outlet accuracy and toggles between a strict grim
+  trigger and a generous mode depending on how trustworthy the network appears.
+
 ## Add your own strategy
 
 Create a new file in `app/strategies/` and implement a class deriving from `BaseStrategy`.

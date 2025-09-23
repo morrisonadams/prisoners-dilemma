@@ -1,0 +1,30 @@
+{
+  "outlets": [
+    {
+      "name": "GlobalTruth",
+      "coverage": 0.8,
+      "accuracy": 0.97,
+      "delay": [0, 1]
+    },
+    {
+      "name": "RegionalObserver",
+      "coverage": 0.65,
+      "accuracy": 0.9,
+      "delay": [1, 2]
+    },
+    {
+      "name": "QuickTake",
+      "coverage": 0.45,
+      "accuracy": 0.7,
+      "delay": [0, 1, 2, 3]
+    }
+  ],
+  "subscriptions": {
+    "limit": 2,
+    "defaults": {
+      "TitForTat": ["GlobalTruth"],
+      "WinStayLoseShift": ["GlobalTruth", "RegionalObserver"],
+      "Random": ["QuickTake"]
+    }
+  }
+}

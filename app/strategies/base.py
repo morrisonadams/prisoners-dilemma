@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import List, TYPE_CHECKING
+from typing import List, Sequence, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ..media import MediaReport
+    from ..media import MediaOutlet, MediaReport
 
 class BaseStrategy(ABC):
     """
@@ -37,6 +37,16 @@ class BaseStrategy(ABC):
         """Return the rumors observed by this strategy since the last reset."""
 
         return list(self._rumors)
+
+    def preferred_media_outlets(self, outlets: Sequence["MediaOutlet"]) -> Sequence[str]:
+        """Return outlet names this strategy wishes to follow by default.
+
+        Base strategies return an empty sequence, leaving enrollment control to
+        tournament configuration. Media-aware strategies can override this to
+        express automatic subscriptions derived from outlet attributes.
+        """
+
+        return ()
 
     @abstractmethod
     def decide(self, my_history, opp_history, round_index: int) -> str:

@@ -42,11 +42,7 @@ MEDIA_PRESETS: Dict[str, Dict[str, Any]] = {
         ],
         "subscriptions": {
             "limit": 2,
-            "defaults": {
-                "TitForTat": ["GlobalTruth"],
-                "GrimTrigger": ["AxelrodTimes"],
-                "Random": ["RumorMill"],
-            },
+            "defaults": {},
         },
     },
 }
@@ -294,6 +290,7 @@ class MediaNetwork:
     _pending: List[Tuple[int, MediaReport]] = field(default_factory=list, init=False, repr=False)
     _listeners: List[BaseStrategy] = field(default_factory=list, init=False, repr=False)
     _resolved_enrollments: Dict[str, List[str]] = field(default_factory=dict, init=False, repr=False)
+    _auto_enrollments: Dict[str, List[str]] = field(default_factory=dict, init=False, repr=False)
     _report_log: List[Dict[str, Any]] = field(default_factory=list, init=False, repr=False)
 
     def __post_init__(self) -> None:
@@ -327,8 +324,9 @@ class MediaNetwork:
         for player in self._listeners:
             player.media_reset()
         active = {player.name() for player in self._listeners}
-        self._apply_active_players(active)
+        self._auto_enrollments = self._determine_auto_enrollments()
         self._resolve_subscriptions()
+        self._apply_active_players(active)
 
     def set_rng(self, rng: random.Random | None) -> None:
         self.rng = rng if rng is not None else random.Random()
@@ -434,10 +432,28 @@ class MediaNetwork:
         resolved: Dict[str, List[str]] = {}
         for strategy, outlets in (self.default_enrollments or {}).items():
             resolved[strategy] = self._normalize_choices(outlets)
+        for strategy, outlets in (self._auto_enrollments or {}).items():
+            normalized = self._normalize_choices(outlets)
+            if normalized:
+                resolved[strategy] = normalized
         for strategy, outlets in (self.enrollments or {}).items():
             resolved[strategy] = self._normalize_choices(outlets)
         self._resolved_enrollments = resolved
         self._prune_enrollments()
+
+    def _determine_auto_enrollments(self) -> Dict[str, List[str]]:
+        if not self._listeners:
+            return {}
+        auto: Dict[str, List[str]] = {}
+        for player in self._listeners:
+            try:
+                choices = player.preferred_media_outlets(self.outlets)
+            except AttributeError:
+                continue
+            normalized = self._normalize_choices(choices)
+            if normalized:
+                auto[player.name()] = normalized
+        return auto
 
     def _apply_active_players(self, active: set[str]) -> None:
         if not active:
